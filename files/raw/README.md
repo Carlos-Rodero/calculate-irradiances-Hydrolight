@@ -1,5 +1,3 @@
-# Calculate Irradiances from Hydrolight Lroot file
-
 ## Instructions
 
 - Copy your Lroot file from Hydrolight ("Lroot.txt") here. 

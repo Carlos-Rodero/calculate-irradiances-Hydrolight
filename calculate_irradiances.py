@@ -22,8 +22,7 @@ class ProcessRadFile:
     """
     Open Lroot.txt file and extract values we need it.
     Create dataframe from content of file
-    Obtain irradiances from total radiance we have defined in config.json
-    (Ed, Eu or El)
+    Obtain irradiances Ed, Eu and El from total radiance
     """
 
     def __init__(self):

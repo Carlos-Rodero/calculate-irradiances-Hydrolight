@@ -269,53 +269,59 @@ class ProcessRadFile:
                and ((phi >= 0) and (phi <= 180)):
 
                 # calculate in two polar cap radiance
-                if (theta == 0) and (phi == 0):
+                """ if (theta == 0) and (phi == 0):
                     L1_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
                         1-math.sin(math.radians(5)))
 
                 if (theta == 180) and (phi == 180):
                     L1_minus10_1 = self.df['total_radiance'].iloc[i] * \
-                        2*math.pi*(1-math.sin(math.radians(5)))
+                        2*math.pi*(1-math.sin(math.radians(5))) """
 
                 # calculate over the non-polar quad. dmu from 1 to
                 # minus 9, dphi from 1 to 12.
 
                 # calculate dmu and dphi and add to cos_weight_rad
                 if (theta == 87.5):
-                    dmu = math.sin(math.radians(theta - 2.5)) - math.sin(
+                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
                         math.radians(theta + 2.5))
                     theta_r = theta
+                    phi_s = phi
 
                     dphi = (15*2*math.pi)/360
 
                     sin_weight_rad_El1 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * dmu * dphi
+                        math.sin(math.radians(theta_r)) * \
+                        math.cos(math.radians(phi_s)) * dmu * dphi
 
                 elif (theta == 92.5):
-                    dmu = math.sin(math.radians(theta - 2.5)) - math.sin(
+                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
                         math.radians(theta + 2.5))
                     theta_r = theta
+                    phi_s = phi
 
                     dphi = (15*2*math.pi)/360
 
                     sin_weight_rad_El1 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * dmu * dphi
+                        math.sin(math.radians(theta_r)) * \
+                        math.cos(math.radians(phi_s)) * dmu * dphi
 
                 elif ((theta > 0) and (theta < 180)):
-                    dmu = math.sin(math.radians(theta - 5)) - math.sin(
+                    dmu = math.cos(math.radians(theta - 5)) - math.cos(
                         math.radians(theta + 5))
                     theta_r = theta
+                    phi_s = phi
 
                     dphi = (15*2*math.pi)/360
 
                     sin_weight_rad_El1 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * dmu * dphi
+                        math.sin(math.radians(theta_r)) * \
+                        math.cos(math.radians(phi_s)) * dmu * dphi
 
                 else:
                     pass
 
             try:
-                total_El1 = sin_weight_rad_El1 + L1_10_1 + L1_minus10_1
+                total_El1 = sin_weight_rad_El1  # + L1_10_1 + L1_minus10_1
                 df_final.loc[
                     (df_final['depth'] == d) & (
                         df_final['lambda'] == lmbd),
@@ -328,53 +334,59 @@ class ProcessRadFile:
                and ((phi >= 180) and (phi <= 360)):
 
                 # calculate in two polar cap radiance
-                if (theta == 0) and (phi == 180):
+                """ if (theta == 0) and (phi == 180):
                     L2_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
                         1-math.sin(math.radians(5)))
 
                 if (theta == 180) and (phi == 180):
                     L2_minus10_1 = self.df['total_radiance'].iloc[i] * \
-                        2*math.pi*(1-math.sin(math.radians(5)))
+                        2*math.pi*(1-math.sin(math.radians(5))) """
 
                 # calculate over the non-polar quad. dmu from 1 to
                 # minus 9, dphi from 1 to 12.
 
                 # calculate dmu and dphi and add to cos_weight_rad
                 if (theta == 87.5):
-                    dmu = math.sin(math.radians(theta - 2.5)) - math.sin(
+                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
                         math.radians(theta + 2.5))
                     theta_r = theta
+                    phi_s = phi
 
                     dphi = (15*2*math.pi)/360
 
                     sin_weight_rad_El2 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * dmu * dphi
+                        math.sin(math.radians(theta_r)) * \
+                        math.cos(math.radians(phi_s)) * dmu * dphi
 
                 elif (theta == 92.5):
-                    dmu = math.sin(math.radians(theta - 2.5)) - math.sin(
+                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
                         math.radians(theta + 2.5))
                     theta_r = theta
+                    phi_s = phi
 
                     dphi = (15*2*math.pi)/360
 
                     sin_weight_rad_El2 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * dmu * dphi
+                        math.sin(math.radians(theta_r)) * \
+                        math.cos(math.radians(phi_s)) * dmu * dphi
 
                 elif ((theta > 0) and (theta < 180)):
-                    dmu = math.sin(math.radians(theta - 5)) - math.sin(
+                    dmu = math.cos(math.radians(theta - 5)) - math.cos(
                         math.radians(theta + 5))
                     theta_r = theta
+                    phi_s = s
 
                     dphi = (15*2*math.pi)/360
 
                     sin_weight_rad_El2 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * dmu * dphi
+                        math.sin(math.radians(theta_r)) * \
+                        math.cos(math.radians(phi_s)) * dmu * dphi
 
                 else:
                     pass
 
             try:
-                total_El2 = sin_weight_rad_El2 + L2_10_1 + L2_minus10_1
+                total_El2 = sin_weight_rad_El2  # + L2_10_1 + L2_minus10_1
                 df_final.loc[
                     (df_final['depth'] == d) & (
                         df_final['lambda'] == lmbd),

@@ -440,7 +440,7 @@ class ProcessRadFile:
 
                 # Calculate El2
                 if ((theta >= 0) and (theta <= 180)) \
-                   and ((phi >= 90) and (phi <= 270)):
+                   and ((phi >= 180) and (phi <= 360)):
 
                     # calculate in two polar cap radiance
                     """ if (theta == 0) and (phi == 180):
@@ -494,8 +494,8 @@ class ProcessRadFile:
                     pass
 
         # save as csv
-        fname = f"{self.file_name.split('.')[0]}_sit{str(self.situation)}\
-            _calculated_irradiances.csv"
+        fsitn = "_situation" + str(self.situation)
+        fname = f"{self.file_name.split('.')[0]}{fsitn}_calc_irradiances.csv"
         f = os.path.join(self.path_files_csv, fname)
         df_final.to_csv(f)
 

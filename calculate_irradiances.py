@@ -494,8 +494,7 @@ class ProcessRadFile:
                     pass
 
         # save as csv
-        fsitn = "_situation" + str(self.situation)
-        fname = f"{self.file_name.split('.')[0]}{fsitn}_calc_irradiances.csv"
+        fname = f"{self.file_name.split('.')[0]}_calculated_irradiances.csv"
         f = os.path.join(self.path_files_csv, fname)
         df_final.to_csv(f)
 

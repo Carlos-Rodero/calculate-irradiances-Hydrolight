@@ -12,7 +12,6 @@ import re
 import pandas as pd
 import io
 import math
-import numpy as np
 import sys
 import time
 import threading
@@ -36,6 +35,7 @@ class ProcessRadFile:
         self.path_files_csv = "files/csv"
         self.content = None
         self.df = pd.DataFrame()
+        self.situation = 1
 
     def open_file(self):
         """
@@ -264,138 +264,238 @@ class ProcessRadFile:
             except UnboundLocalError:
                 pass
 
-            # Calculate El1
-            if ((theta >= 0) and (theta <= 180)) \
-               and ((phi >= 0) and (phi <= 180)):
+            # Situation 1. El1 hemisphere: -90 < phi < 90
+            if self.situation == 1:
 
-                # calculate in two polar cap radiance
-                """ if (theta == 0) and (phi == 0):
-                    L1_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
-                        1-math.sin(math.radians(5)))
+                # Calculate El1
 
-                if (theta == 180) and (phi == 180):
-                    L1_minus10_1 = self.df['total_radiance'].iloc[i] * \
-                        2*math.pi*(1-math.sin(math.radians(5))) """
+                if ((theta >= 0) and (theta <= 180)) \
+                   and ((phi > 0) and (phi <= 90)) or \
+                       ((phi >= 270) and (phi <= 360)):
+                    # In phi = 0 or phi = 360 we have the same radiance
+                    # measurement, for this reason we only take one
 
-                # calculate over the non-polar quad. dmu from 1 to
-                # minus 9, dphi from 1 to 12.
+                    # calculate in two polar cap radiance
+                    """ if (theta == 0) and (phi == 0):
+                        L1_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
+                            1-math.sin(math.radians(5)))
 
-                # calculate dmu and dphi and add to cos_weight_rad
-                if (theta == 87.5):
-                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
-                        math.radians(theta + 2.5))
-                    theta_r = theta
-                    phi_s = phi
+                    if (theta == 180) and (phi == 180):
+                        L1_minus10_1 = self.df['total_radiance'].iloc[i] * \
+                            2*math.pi*(1-math.sin(math.radians(5))) """
 
-                    dphi = (15*2*math.pi)/360
+                    # calculate over the non-polar quad. dmu from 1 to
+                    # minus 9, dphi from 1 to 12.
 
-                    sin_weight_rad_El1 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * \
-                        math.cos(math.radians(phi_s)) * dmu * dphi
+                    # calculate dmu and dphi and add to cos_weight_rad
+                    if ((theta == 87.5) or (theta == 92.5)):
+                        dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
+                            math.radians(theta + 2.5))
+                        theta_r = theta
+                        phi_s = phi
 
-                elif (theta == 92.5):
-                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
-                        math.radians(theta + 2.5))
-                    theta_r = theta
-                    phi_s = phi
+                        dphi = (15*2*math.pi)/360
 
-                    dphi = (15*2*math.pi)/360
+                        sin_weight_rad_El1 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.cos(math.radians(phi_s))) * dmu * dphi
 
-                    sin_weight_rad_El1 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * \
-                        math.cos(math.radians(phi_s)) * dmu * dphi
+                    elif ((theta > 0) and (theta < 180)):
+                        dmu = math.cos(math.radians(theta - 5)) - math.cos(
+                            math.radians(theta + 5))
+                        theta_r = theta
+                        phi_s = phi
 
-                elif ((theta > 0) and (theta < 180)):
-                    dmu = math.cos(math.radians(theta - 5)) - math.cos(
-                        math.radians(theta + 5))
-                    theta_r = theta
-                    phi_s = phi
+                        dphi = (15*2*math.pi)/360
 
-                    dphi = (15*2*math.pi)/360
+                        sin_weight_rad_El1 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.cos(math.radians(phi_s))) * dmu * dphi
 
-                    sin_weight_rad_El1 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * \
-                        math.cos(math.radians(phi_s)) * dmu * dphi
+                    else:
+                        pass
 
-                else:
+                try:
+                    total_El1 = sin_weight_rad_El1  # + L1_10_1 + L1_minus10_1
+                    df_final.loc[
+                        (df_final['depth'] == d) & (
+                            df_final['lambda'] == lmbd),
+                        'calculated_El1'] = total_El1
+                except UnboundLocalError:
                     pass
 
-            try:
-                total_El1 = sin_weight_rad_El1  # + L1_10_1 + L1_minus10_1
-                df_final.loc[
-                    (df_final['depth'] == d) & (
-                        df_final['lambda'] == lmbd),
-                    'calculated_El1'] = total_El1
-            except UnboundLocalError:
-                pass
+                # Calculate El2
+                if ((theta >= 0) and (theta <= 180)) \
+                   and ((phi >= 90) and (phi <= 270)):
 
-            # Calculate El2
-            if ((theta >= 0) and (theta <= 180)) \
-               and ((phi >= 180) and (phi <= 360)):
+                    # calculate in two polar cap radiance
+                    """ if (theta == 0) and (phi == 180):
+                        L2_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
+                            1-math.sin(math.radians(5)))
 
-                # calculate in two polar cap radiance
-                """ if (theta == 0) and (phi == 180):
-                    L2_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
-                        1-math.sin(math.radians(5)))
+                    if (theta == 180) and (phi == 180):
+                        L2_minus10_1 = self.df['total_radiance'].iloc[i] * \
+                            2*math.pi*(1-math.sin(math.radians(5))) """
 
-                if (theta == 180) and (phi == 180):
-                    L2_minus10_1 = self.df['total_radiance'].iloc[i] * \
-                        2*math.pi*(1-math.sin(math.radians(5))) """
+                    # calculate over the non-polar quad. dmu from 1 to
+                    # minus 9, dphi from 1 to 12.
 
-                # calculate over the non-polar quad. dmu from 1 to
-                # minus 9, dphi from 1 to 12.
+                    # calculate dmu and dphi and add to cos_weight_rad
+                    if ((theta == 87.5) or (theta == 92.5)):
+                        dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
+                            math.radians(theta + 2.5))
+                        theta_r = theta
+                        phi_s = phi
 
-                # calculate dmu and dphi and add to cos_weight_rad
-                if (theta == 87.5):
-                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
-                        math.radians(theta + 2.5))
-                    theta_r = theta
-                    phi_s = phi
+                        dphi = (15*2*math.pi)/360
 
-                    dphi = (15*2*math.pi)/360
+                        sin_weight_rad_El2 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.cos(math.radians(phi_s))) * dmu * dphi
 
-                    sin_weight_rad_El2 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * \
-                        math.cos(math.radians(phi_s)) * dmu * dphi
+                    elif ((theta > 0) and (theta < 180)):
+                        dmu = math.cos(math.radians(theta - 5)) - math.cos(
+                            math.radians(theta + 5))
+                        theta_r = theta
+                        phi_s = phi
 
-                elif (theta == 92.5):
-                    dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
-                        math.radians(theta + 2.5))
-                    theta_r = theta
-                    phi_s = phi
+                        dphi = (15*2*math.pi)/360
 
-                    dphi = (15*2*math.pi)/360
+                        sin_weight_rad_El2 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.cos(math.radians(phi_s))) * dmu * dphi
 
-                    sin_weight_rad_El2 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * \
-                        math.cos(math.radians(phi_s)) * dmu * dphi
+                    else:
+                        pass
 
-                elif ((theta > 0) and (theta < 180)):
-                    dmu = math.cos(math.radians(theta - 5)) - math.cos(
-                        math.radians(theta + 5))
-                    theta_r = theta
-                    phi_s = s
-
-                    dphi = (15*2*math.pi)/360
-
-                    sin_weight_rad_El2 += self.df['total_radiance'].iloc[i] * \
-                        math.sin(math.radians(theta_r)) * \
-                        math.cos(math.radians(phi_s)) * dmu * dphi
-
-                else:
+                try:
+                    total_El2 = sin_weight_rad_El2  # + L2_10_1 + L2_minus10_1
+                    df_final.loc[
+                        (df_final['depth'] == d) & (
+                            df_final['lambda'] == lmbd),
+                        'calculated_El2'] = total_El2
+                except UnboundLocalError:
                     pass
 
-            try:
-                total_El2 = sin_weight_rad_El2  # + L2_10_1 + L2_minus10_1
-                df_final.loc[
-                    (df_final['depth'] == d) & (
-                        df_final['lambda'] == lmbd),
-                    'calculated_El2'] = total_El2
-            except UnboundLocalError:
-                pass
+            elif self.situation == 2:
+                # Calculate El1
+
+                if ((theta >= 0) and (theta <= 180)) \
+                   and ((phi >= 0) and (phi <= 180)):
+
+                    # calculate in two polar cap radiance
+                    """ if (theta == 0) and (phi == 0):
+                        L1_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
+                            1-math.sin(math.radians(5)))
+
+                    if (theta == 180) and (phi == 180):
+                        L1_minus10_1 = self.df['total_radiance'].iloc[i] * \
+                            2*math.pi*(1-math.sin(math.radians(5))) """
+
+                    # calculate over the non-polar quad. dmu from 1 to
+                    # minus 9, dphi from 1 to 12.
+
+                    # calculate dmu and dphi and add to cos_weight_rad
+                    if ((theta == 87.5) or (theta == 92.5)):
+                        dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
+                            math.radians(theta + 2.5))
+                        theta_r = theta
+                        phi_s = phi
+
+                        dphi = (15*2*math.pi)/360
+
+                        sin_weight_rad_El1 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.sin(math.radians(phi_s))) * dmu * dphi
+
+                    elif ((theta > 0) and (theta < 180)):
+                        dmu = math.cos(math.radians(theta - 5)) - math.cos(
+                            math.radians(theta + 5))
+                        theta_r = theta
+                        phi_s = phi
+
+                        dphi = (15*2*math.pi)/360
+
+                        sin_weight_rad_El1 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.sin(math.radians(phi_s))) * dmu * dphi
+
+                    else:
+                        pass
+
+                try:
+                    total_El1 = sin_weight_rad_El1  # + L1_10_1 + L1_minus10_1
+                    df_final.loc[
+                        (df_final['depth'] == d) & (
+                            df_final['lambda'] == lmbd),
+                        'calculated_El1'] = total_El1
+                except UnboundLocalError:
+                    pass
+
+                # Calculate El2
+                if ((theta >= 0) and (theta <= 180)) \
+                   and ((phi >= 90) and (phi <= 270)):
+
+                    # calculate in two polar cap radiance
+                    """ if (theta == 0) and (phi == 180):
+                        L2_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
+                            1-math.sin(math.radians(5)))
+
+                    if (theta == 180) and (phi == 180):
+                        L2_minus10_1 = self.df['total_radiance'].iloc[i] * \
+                            2*math.pi*(1-math.sin(math.radians(5))) """
+
+                    # calculate over the non-polar quad. dmu from 1 to
+                    # minus 9, dphi from 1 to 12.
+
+                    # calculate dmu and dphi and add to cos_weight_rad
+                    if ((theta == 87.5) or (theta == 92.5)):
+                        dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
+                            math.radians(theta + 2.5))
+                        theta_r = theta
+                        phi_s = phi
+
+                        dphi = (15*2*math.pi)/360
+
+                        sin_weight_rad_El2 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.sin(math.radians(phi_s))) * dmu * dphi
+
+                    elif ((theta > 0) and (theta < 180)):
+                        dmu = math.cos(math.radians(theta - 5)) - math.cos(
+                            math.radians(theta + 5))
+                        theta_r = theta
+                        phi_s = phi
+
+                        dphi = (15*2*math.pi)/360
+
+                        sin_weight_rad_El2 += self.df[
+                            'total_radiance'].iloc[i] * \
+                            abs(math.sin(math.radians(theta_r)) *
+                                math.sin(math.radians(phi_s))) * dmu * dphi
+
+                    else:
+                        pass
+
+                try:
+                    total_El2 = sin_weight_rad_El2  # + L2_10_1 + L2_minus10_1
+                    df_final.loc[
+                        (df_final['depth'] == d) & (
+                            df_final['lambda'] == lmbd),
+                        'calculated_El2'] = total_El2
+                except UnboundLocalError:
+                    pass
 
         # save as csv
-        fname = f"{self.file_name.split('.')[0]}_calculated_irradiances.csv"
+        fname = f"{self.file_name.split('.')[0]}_sit{str(self.situation)}\
+            _calculated_irradiances.csv"
         f = os.path.join(self.path_files_csv, fname)
         df_final.to_csv(f)
 

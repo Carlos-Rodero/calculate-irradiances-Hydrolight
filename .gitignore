@@ -1,4 +1,4 @@
-files/raw/Lroot.txt
+files/raw/*txt
 files/csv/*csv
 .*
 .gitignore

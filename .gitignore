@@ -1,1 +1,6 @@
 files/raw/Lroot.txt
+files/csv/*csv
+.*
+.gitignore
+env
+

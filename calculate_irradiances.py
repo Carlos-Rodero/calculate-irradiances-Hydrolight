@@ -30,7 +30,7 @@ class ProcessRadFile:
         self.start_string_Lroot = (r"L_dif is in-water diffuse radiance; "
                                    r"theta = 0 to 180 deg; in water only")
         self.stop_string_Lroot = r""
-        self.file_name = "Lroot.txt"
+        self.file_name = "Lroot2.txt"
         self.path_files_raw = "files/raw"
         self.path_files_csv = "files/csv"
         self.content = None
@@ -311,21 +311,20 @@ class ProcessRadFile:
 
                     # calculate in two polar cap radiance.
                     # Divide by 2 to get half polar cap radiance
-                    if (theta == 0) and (phi == 0):
-                        L1_10_1 = (
-                            self.df['total_radiance'].iloc[i]*2*math.pi*(
-                                1-math.sin(math.radians(5))))/2
+                    if (theta == 0) and (phi == 15):
+                        L1_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
+                            1-math.cos(math.radians(5)))/2
 
-                    if (theta == 180) and (phi == 180):
+                    elif (theta == 180) and (phi == 15):
                         L1_minus10_1 = (
-                            self.df['total_radiance'].iloc[i] *
-                            2*math.pi*(1-math.sin(math.radians(5))))/2
+                            self.df['total_radiance'].iloc[i]*2*math.pi*(
+                                1-math.cos(math.radians(5)))/2)
 
                     # calculate over the non-polar quad. dmu from 1 to
                     # minus 9, dphi from 1 to 12.
 
                     # calculate dmu and dphi and add to sin_weight_rad_El1
-                    if ((theta == 87.5) or (theta == 92.5)):
+                    elif ((theta == 87.5) or (theta == 92.5)):
                         dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
                             math.radians(theta + 2.5))
                         theta_r = theta
@@ -384,20 +383,19 @@ class ProcessRadFile:
                     # calculate in two polar cap radiance
                     # Divide by 2 to get half polar cap radiance
                     if (theta == 0) and (phi == 180):
-                        L2_10_1 = (
-                            self.df['total_radiance'].iloc[i]*2*math.pi*(
-                                1-math.sin(math.radians(5))))/2
+                        L2_10_1 = self.df['total_radiance'].iloc[i]*2*math.pi*(
+                            1-math.cos(math.radians(5)))/2
 
-                    if (theta == 180) and (phi == 180):
+                    elif (theta == 180) and (phi == 180):
                         L2_minus10_1 = (
-                            self.df['total_radiance'].iloc[i] *
-                            2*math.pi*(1-math.sin(math.radians(5))))/2
+                            self.df['total_radiance'].iloc[i]*2*math.pi*(
+                                1-math.cos(math.radians(5)))/2)
 
                     # calculate over the non-polar quad. dmu from 1 to
                     # minus 9, dphi from 1 to 12.
 
                     # calculate dmu and dphi and add to sin_weight_rad_El2
-                    if ((theta == 87.5) or (theta == 92.5)):
+                    elif ((theta == 87.5) or (theta == 92.5)):
                         dmu = math.cos(math.radians(theta - 2.5)) - math.cos(
                             math.radians(theta + 2.5))
                         theta_r = theta
@@ -623,7 +621,7 @@ class ProcessRadFile:
                 df_final.loc[
                     (df_final['depth'] == d) & (
                         df_final['lambda'] == lmbd),
-                    'calculated_Ehc'] = total_Ed
+                    'calculated_Ehc'] = total_Ehc
             except UnboundLocalError:
                 pass
 
@@ -655,7 +653,7 @@ class ProcessRadFile:
                 df_final.loc[
                     (df_final['depth'] == d) & (
                         df_final['lambda'] == lmbd),
-                    'calculated_Ehc_45'] = total_Ed
+                    'calculated_Ehc_45'] = total_Ehc_45
             except UnboundLocalError:
                 pass
 

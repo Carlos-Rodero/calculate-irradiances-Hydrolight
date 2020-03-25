@@ -859,4 +859,4 @@ if __name__ == "__main__":
         file_name="Lroot_data.csv",
         path_file="files/csv")
     prf._create_dataframe_from_Lroot_data()
-    prf.plot_heatmap_radiances()
+    prf.plot_heatmap_radiances(has_show=has_show)

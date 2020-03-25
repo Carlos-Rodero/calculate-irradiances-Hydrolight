@@ -15,6 +15,9 @@ import math
 import sys
 import time
 import threading
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+import numpy as np
 
 
 class ProcessRadFile:
@@ -30,18 +33,28 @@ class ProcessRadFile:
         self.start_string_Lroot = (r"L_dif is in-water diffuse radiance; "
                                    r"theta = 0 to 180 deg; in water only")
         self.stop_string_Lroot = r""
-        self.file_name = "Lroot2.txt"
+        self.file_name = "Lroot.txt"
         self.path_files_raw = "files/raw"
         self.path_files_csv = "files/csv"
         self.content = None
         self.df = pd.DataFrame()
         self.situation = 1
 
-    def open_file(self):
+    def open_file(self, file_name=None, path_file=None):
         """
         Open file and get content of file
+
+        Parameters
+        ----------
+            file_name: str
+                Name of the file (Default=None)
+            path_file: str
+                Path of the file (Default=None)
         """
-        f = os.path.join(self.path_files_raw, self.file_name)
+        if file_name is None:
+            f = os.path.join(self.path_files_raw, self.file_name)
+        else:
+            f = os.path.join(path_file, file_name)
         try:
             with open(f, 'r') as file:
                 self.content = file.read()
@@ -682,10 +695,168 @@ class ProcessRadFile:
             time.sleep(.1)
             sys.stdout.flush()
 
+    def _create_dataframe_from_Lroot_data(self):
+        """
+        Create dataframe from content file
+        """
+        # Create dataframe from content of .csv file
+        self.df = pd.read_csv(io.StringIO(self.content), header=0,
+                              skipinitialspace=True, index_col=0)
+
+    def plot_heatmap_radiances(self,  has_show=False):
+        """
+        Plot radiances as heatmaps in different depths and lambdas in Plotly
+
+        Parameters
+        ----------
+            has_show: Boolean
+                Flag to show the plot. By default, False.
+
+        """
+        self.df = self.df.apply(pd.to_numeric, args=('coerce',))
+        df = self.df
+        list_radiance = []
+        index = None
+        index_row = None
+        index_column = None
+
+        fig = make_subplots(
+            rows=2, cols=3,
+            column_widths=[0.5, 0.5, 0.5],
+            row_heights=[0.5, 0.5],
+            subplot_titles=("Radiances at 460",
+                            "Radiances at 500",
+                            "Radiances at 540",
+                            "Radiances at 560",
+                            "Radiances at 600",
+                            "Radiances at 640"))
+
+        # create heatmap with following axes (to represent the hydrolight
+        # particle in 2D)
+        # x = phi   (25 elements)
+        # y = theta (20 elements)
+        # z = list of lists of radiance for each theta (there are 25 elements
+        # for each list)
+        for z in df['depth'].unique():
+            if (z == 0.25) or (z == 1.00) or (z == 5.00):
+                index_row = 1
+                index_column = 1
+                index = 1
+
+                for i in df['lambda'].unique():
+                    if (i == 460) or (i == 500) or (i == 540) or \
+                     (i == 560) or (i == 600) or (i == 640):
+                        # clear data
+                        list_radiance.clear()
+                        # count
+                        if index_row == 3:
+                            index_row = 1
+                        if index_column == 4:
+                            index_column = 1
+
+                        for t in df['theta'].unique():
+
+                            radiance = list(
+                                df['total_radiance'].loc[(
+                                    df['lambda'] == i) & (
+                                        df['depth'] == z) & (
+                                            df['theta'] == t)])
+                            list_radiance.append(radiance)
+
+                        # fig = go.Figure(data=go.Heatmap(
+                        data = go.Heatmap(
+                            z=list_radiance, zmin=0, zmax=1,
+                            x=df['phi'].unique(),
+                            x0=0,
+                            dx=15,
+                            y=df['theta'].unique(),
+                            y0=0,
+                            dy=10,
+                            colorbar=dict(title='Range'),
+                            hovertemplate='phi: %{x}<br>theta: %{y}' +
+                            '<br>radiance: %{z}<extra></extra>',
+                            hoverongaps=False)
+
+                        fig.append_trace(data, index_row, index_column)
+
+                        fig.update_xaxes(
+                            title=go.layout.xaxis.Title(
+                                text='phi'))
+
+                        fig.update_yaxes(
+                            autorange="reversed",
+                            title=go.layout.yaxis.Title(
+                                text='theta'))
+
+                        fig.update_layout(
+                            title=f'Radiances at depth: {z}')
+
+                        index_row += 1
+                        index_column += 1
+                        index += 1
+
+                if has_show is True:
+                    fig.show(config={'showLink': True})
+
+                if not os.path.exists("images/plotly"):
+                    os.mkdir("images/plotly")
+                fig.write_image(
+                    f"images/plotly/heatmap_radiance_depth_{z}.svg")
+                fig.write_html(
+                    f"images/plotly/heatmap_radiance_depth_{z}.html")
+
+        # to do
+        # heatmap as a circular particle of Hydrolight. Example below
+        """ N = 300
+        R = 1
+        x = np.linspace(-R, R, N)
+        y = np.linspace(-R, R, N)
+        X, Y = np.meshgrid(x, y)
+
+        disk = X**2+Y**2
+        I, J = np.where(disk > R)
+        z = X*Y**2-X**3*np.sin(X-Y)
+        # mask the outside of the disk of center (0,0)   and radius R
+        z[I, J] = None
+
+        trace = dict(type='heatmap',
+                     x=x,
+                     y=y,
+                     # note that z has the shape of X,Y,
+                     # not x,y as in your exmple!
+                     z=z,
+                     colorscale='YlGnBu',
+                     showscale=True,
+                     colorbar=dict(thickness=20,
+                                   ticklen=4,
+                                   tickfont=dict(size=10)))
+
+        layout = dict(title='Polar heatmap',
+                      width=450,
+                      height=450,
+                      showlegend=False,
+                      xaxis=dict(visible=False),
+                      yaxis=dict(visible=False)
+                      )
+
+        fig = go.Figure(layout=layout)
+        fig.add_trace(trace)
+        fig.write_html("example.html") """
+
 
 if __name__ == "__main__":
 
     prf = ProcessRadFile()
-    prf.open_file()
-    prf.create_dataframe_from_Lroot()
-    prf.calculate_irradiances()
+    # prf.open_file()
+    # prf.create_dataframe_from_Lroot()
+    # prf.calculate_irradiances()
+
+    # Flag to show or hide plot
+    has_show = True
+
+    # plot radiances in a heatmap
+    prf.open_file(
+        file_name="Lroot_data.csv",
+        path_file="files/csv")
+    prf._create_dataframe_from_Lroot_data()
+    prf.plot_heatmap_radiances()

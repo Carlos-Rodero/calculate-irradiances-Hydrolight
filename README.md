@@ -7,3 +7,7 @@ This script calculate Ed as the downwelling irradiance, Eu as the upwelling irra
 
 - Copy your Lroot file from Hydrolight inside the files/raw folder
 - Results appear in files/csv folder
+
+## Install Dependencies
+
+- npm install -g electron@1.8.4 orca

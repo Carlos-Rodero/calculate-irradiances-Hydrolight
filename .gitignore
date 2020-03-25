@@ -3,4 +3,5 @@ files/csv/*csv
 .*
 .gitignore
 env
-
+images/plotly/*
+images/matplotlib/*

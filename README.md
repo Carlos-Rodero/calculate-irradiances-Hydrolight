@@ -11,3 +11,10 @@ This script calculate Ed as the downwelling irradiance, Eu as the upwelling irra
 ## Install Dependencies
 
 - npm install -g electron@1.8.4 orca
+
+In case you find a "ConnectionRefusedError" when you try the fig.write_image() Plotly function, you have to allow configure orca to send requests to remote server with the following command line:
+
+orca serve -p 32909 --plotly
+
+
+

@@ -19,6 +19,12 @@ import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import numpy as np
 
+# allow configure orca to send requests to remote server
+import plotly.io as pio
+
+pio._orca.ensure_server = lambda: None
+pio._orca.orca_state["port"] = 32909
+
 
 class ProcessRadFile:
     """
@@ -800,8 +806,16 @@ class ProcessRadFile:
 
                 if not os.path.exists("images/plotly"):
                     os.mkdir("images/plotly")
-                fig.write_image(
-                    f"images/plotly/heatmap_radiance_depth_{z}.svg")
+
+                try:
+                    fig.write_image(
+                        f"images/plotly/heatmap_radiance_depth_{z}.svg")
+                except Exception as e:
+                    print(
+                        "allow configure orca to send requests to remote "
+                        "server with the following command line:"
+                        "\norca serve -p 32909 --plotly")
+                    break
                 fig.write_html(
                     f"images/plotly/heatmap_radiance_depth_{z}.html")
 
@@ -851,8 +865,8 @@ if __name__ == "__main__":
     # prf.create_dataframe_from_Lroot()
     # prf.calculate_irradiances()
 
-    # Flag to show or hide plot
-    has_show = True
+    # Flag to show or hide plot in browser
+    has_show = False
 
     # plot radiances in a heatmap
     prf.open_file(

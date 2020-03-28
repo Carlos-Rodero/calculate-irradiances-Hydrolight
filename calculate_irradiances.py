@@ -4,7 +4,8 @@ Created on Fri Jan 10 10:11:00 2020
 
 @author: Carlos Rodero García
 
-Process file Lroot from Hydrolight to obtain the irradiance (Ed, Eu or El).
+Module to process file Lroot from Hydrolight to obtain the irradiance
+(Ed, Eu, El or different ones).
 
 """
 import os
@@ -30,21 +31,83 @@ class ProcessRadFile:
     """
     Open Lroot.txt file and extract values we need it.
     Create dataframe from content of file
-    Obtain irradiances Ed, Eu and different El from total radiance
+    Obtain irradiances Ed, Eu and different ones from total radiance
+
+    Parameters
+    ----------
+        situation: int
+            Define how we calculate phi in case of lateral Irradiance
+            (Default=1)
+            situation=1 El1 hemisphere: -90 &lt phi &lt 90
+            situation=2 El1 hemisphere:   0 &lt phi &lt 180
     """
 
-    def __init__(self):
-
+    def __init__(self, situation=1):
         # class variables
         self.start_string_Lroot = (r"L_dif is in-water diffuse radiance; "
                                    r"theta = 0 to 180 deg; in water only")
         self.stop_string_Lroot = r""
         self.file_name = "Lroot.txt"
+        self.file_name_csv = f"{self.file_name.split('.')[0]}_data.csv"
         self.path_files_raw = "files/raw"
         self.path_files_csv = "files/csv"
+        self.path_images_plotly = "images/plotly"
         self.content = None
         self.df = pd.DataFrame()
-        self.situation = 1
+        self.situation = situation
+
+    def calc_irradiances(self, file_name="Lroot.txt", path_file="files/raw"):
+        """
+        Join methods to calculate irradiances
+
+        Parameters
+        ----------
+            file_name: str
+                Name of the file (Default="Lroot.txt")
+            path_file: str
+                Path of the file (Default="files/raw")
+        """
+        if file_name is None:
+            file_name = self.file_name
+        else:
+            self.file_name = file_name
+
+        self.open_file(file_name=file_name, path_file=path_file)
+        self.create_dataframe_from_Lroot()
+        self.calculate_irradiances()
+
+    def plot_irradiances(self, file_name_csv=None, path_file_csv=None,
+                         is_shown=False, min_lambda=400, max_lambda=700):
+        """
+        Join methods to plot irradiances
+
+        Parameters
+        ----------
+            file_name_csv: str
+                Name of the csv file (Default=None)
+            path_file_csv: str
+                Path of the file (Default=None)
+            is_shown: Boolean
+                Flag to show the plot (Default=False)
+            min_lambda: int
+                Minimum lambda value to plot (Default=400)
+            max_lambda: int
+                Maximum lambda value to plot (Default=700)
+        """
+        if file_name_csv is None:
+            file_name_csv = self.file_name_csv
+        else:
+            self.file_name_csv = file_name_csv
+
+        if path_file_csv is None:
+            path_file_csv = self.path_files_csv
+        else:
+            self.path_files_csv = path_file_csv
+
+        self.open_file(file_name=file_name_csv, path_file=path_file_csv)
+        self.create_dataframe_from_Lroot_data()
+        self.plot_heatmap_radiances(is_shown=is_shown, min_lambda=min_lambda,
+                                    max_lambda=max_lambda)
 
     def open_file(self, file_name=None, path_file=None):
         """
@@ -56,9 +119,14 @@ class ProcessRadFile:
                 Name of the file (Default=None)
             path_file: str
                 Path of the file (Default=None)
+
         """
-        if file_name is None:
+        if (file_name is None) and (path_file is None):
             f = os.path.join(self.path_files_raw, self.file_name)
+        elif file_name is None:
+            f = os.path.join(path_file, self.file_name)
+        elif path_file is None:
+            f = os.path.join(self.path_files_raw, file_name)
         else:
             f = os.path.join(path_file, file_name)
         try:
@@ -101,6 +169,7 @@ class ProcessRadFile:
 
         # Save as csv
         fname = f"{self.file_name.split('.')[0]}_data.csv"
+        self.file_name_csv = fname
         f = os.path.join(self.path_files_csv, fname)
         self.df.to_csv(f)
 
@@ -701,7 +770,7 @@ class ProcessRadFile:
             time.sleep(.1)
             sys.stdout.flush()
 
-    def _create_dataframe_from_Lroot_data(self):
+    def create_dataframe_from_Lroot_data(self):
         """
         Create dataframe from content file
         """
@@ -709,14 +778,19 @@ class ProcessRadFile:
         self.df = pd.read_csv(io.StringIO(self.content), header=0,
                               skipinitialspace=True, index_col=0)
 
-    def plot_heatmap_radiances(self,  has_show=False):
+    def plot_heatmap_radiances(self, min_lambda=400,
+                               max_lambda=700, is_shown=False):
         """
         Plot radiances as heatmaps in different depths and lambdas in Plotly
 
         Parameters
         ----------
-            has_show: Boolean
-                Flag to show the plot. By default, False.
+            is_shown: Boolean
+                Flag to show the plot (Default=False)
+            min_lambda: int
+                Minimum lambda value to plot (Default=400)
+            max_lambda: int
+                Maximum lambda value to plot (Default=700)
 
         """
         self.df = self.df.apply(pd.to_numeric, args=('coerce',))
@@ -725,17 +799,26 @@ class ProcessRadFile:
         index = None
         index_row = None
         index_column = None
+        subplot_titles_list = []
+
+        # filter dataframe lambda. By default:
+        # wavelength > 400 and wavelength < 700
+        df = df[(df['lambda'] > min_lambda) & (df['lambda'] < max_lambda)]
+
+        # number of rows
+        irows = math.ceil(len(df['lambda'].unique())/3)
+
+        # create title of each subplot
+        for i, element in enumerate(df['lambda'].unique()):
+            subplot_titles_list.append(f"Radiances at {str(element)}")
 
         fig = make_subplots(
-            rows=2, cols=3,
-            column_widths=[0.5, 0.5, 0.5],
-            row_heights=[0.5, 0.5],
-            subplot_titles=("Radiances at 460",
-                            "Radiances at 500",
-                            "Radiances at 540",
-                            "Radiances at 560",
-                            "Radiances at 600",
-                            "Radiances at 640"))
+            rows=irows, cols=3,
+            shared_xaxes=True,
+            shared_yaxes=True,
+            y_title="theta",
+            x_title="phi",
+            subplot_titles=subplot_titles_list)
 
         # create heatmap with following axes (to represent the hydrolight
         # particle in 2D)
@@ -750,82 +833,87 @@ class ProcessRadFile:
                 index = 1
 
                 for i in df['lambda'].unique():
-                    if (i == 460) or (i == 500) or (i == 540) or \
-                     (i == 560) or (i == 600) or (i == 640):
-                        # clear data
-                        list_radiance.clear()
-                        # count
-                        if index_row == 3:
-                            index_row = 1
-                        if index_column == 4:
-                            index_column = 1
+                    # clear data
+                    list_radiance.clear()
+                    # update count for columns
+                    if index_column == 4:
+                        index_column = 1
 
-                        for t in df['theta'].unique():
+                    for t in df['theta'].unique():
+                        radiance = list(
+                            df['total_radiance'].loc[(
+                                df['lambda'] == i) & (
+                                    df['depth'] == z) & (
+                                        df['theta'] == t)])
+                        list_radiance.append(radiance)
 
-                            radiance = list(
-                                df['total_radiance'].loc[(
-                                    df['lambda'] == i) & (
-                                        df['depth'] == z) & (
-                                            df['theta'] == t)])
-                            list_radiance.append(radiance)
+                    # fig = go.Figure(data=go.Heatmap(
+                    data = go.Heatmap(
+                        z=list_radiance, zmin=0, zmax=1,
+                        x=df['phi'].unique(),
+                        x0=0,
+                        dx=15,
+                        y=df['theta'].unique(),
+                        y0=0,
+                        dy=10,
+                        colorbar=dict(title='Range'),
+                        hovertemplate='phi: %{x}<br>theta: %{y}' +
+                        '<br>radiance: %{z}<extra></extra>',
+                        hoverongaps=False)
 
-                        # fig = go.Figure(data=go.Heatmap(
-                        data = go.Heatmap(
-                            z=list_radiance, zmin=0, zmax=1,
-                            x=df['phi'].unique(),
-                            x0=0,
-                            dx=15,
-                            y=df['theta'].unique(),
-                            y0=0,
-                            dy=10,
-                            colorbar=dict(title='Range'),
-                            hovertemplate='phi: %{x}<br>theta: %{y}' +
-                            '<br>radiance: %{z}<extra></extra>',
-                            hoverongaps=False)
+                    fig.append_trace(data, index_row, index_column)
 
-                        fig.append_trace(data, index_row, index_column)
+                    # fig.update_xaxes(title=go.layout.xaxis.Title(text='phi'))
 
-                        fig.update_xaxes(
-                            title=go.layout.xaxis.Title(
-                                text='phi'))
+                    # fig.update_yaxes(autorange="reversed",
+                    # title=go.layout.yaxis.Title(text='theta'))
 
-                        fig.update_yaxes(
-                            autorange="reversed",
-                            title=go.layout.yaxis.Title(
-                                text='theta'))
+                    fig.update_yaxes(
+                        autorange="reversed")
 
-                        fig.update_layout(
-                            title=f'Radiances at depth: {z}')
+                    fig.update_layout(
+                        title=f'Radiances at depth: {z}')
 
+                    if index_column % 3 == 0:
                         index_row += 1
-                        index_column += 1
-                        index += 1
+                    index_column += 1
+                    index += 1
 
-                if has_show is True:
+                if is_shown is True:
                     fig.show(config={'showLink': True})
 
                 if not os.path.exists("images/plotly"):
                     os.mkdir("images/plotly")
 
+                # define name of image file
+                name = "_heatmap_radiance_depth_"
+
+                fname = f"{self.file_name_csv.split('.')[0]}{name}{z}"
+                f = os.path.join(self.path_images_plotly, fname)
+
                 try:
-                    fig.write_image(
-                        f"images/plotly/heatmap_radiance_depth_{z}.svg")
+                    fig.write_image(f"{f}.svg",
+                                    width=1920, height=1080, scale=2)
                 except Exception as e:
                     print(
                         "allow configure orca to send requests to remote "
                         "server with the following command line:"
                         "\norca serve -p 32909 --plotly")
                     break
-                fig.write_html(
-                    f"images/plotly/heatmap_radiance_depth_{z}.html")
+                fig.write_html(f"{f}.html")
 
-        # to do
+        """ # to do
         # heatmap as a circular particle of Hydrolight. Example below
-        """ N = 300
+        N = 300
         R = 1
         x = np.linspace(-R, R, N)
         y = np.linspace(-R, R, N)
+        z = list_radiance
+        x = df['phi'].unique()
+        y = df['theta'].unique()
+
         X, Y = np.meshgrid(x, y)
+        print(X, Y)
 
         disk = X**2+Y**2
         I, J = np.where(disk > R)
@@ -856,21 +944,3 @@ class ProcessRadFile:
         fig = go.Figure(layout=layout)
         fig.add_trace(trace)
         fig.write_html("example.html") """
-
-
-if __name__ == "__main__":
-
-    prf = ProcessRadFile()
-    # prf.open_file()
-    # prf.create_dataframe_from_Lroot()
-    # prf.calculate_irradiances()
-
-    # Flag to show or hide plot in browser
-    has_show = False
-
-    # plot radiances in a heatmap
-    prf.open_file(
-        file_name="Lroot_data.csv",
-        path_file="files/csv")
-    prf._create_dataframe_from_Lroot_data()
-    prf.plot_heatmap_radiances(has_show=has_show)

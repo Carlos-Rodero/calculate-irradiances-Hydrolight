@@ -5,3 +5,4 @@ files/csv/*csv
 env
 images/plotly/*
 images/matplotlib/*
+__pycache__

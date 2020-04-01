@@ -127,8 +127,10 @@ class ProcessRadFile:
             f = os.path.join(path_file, self.file_name)
         elif path_file is None:
             f = os.path.join(self.path_files_raw, file_name)
+            self.file_name = file_name
         else:
             f = os.path.join(path_file, file_name)
+            self.file_name = file_name
         try:
             with open(f, 'r') as file:
                 self.content = file.read()

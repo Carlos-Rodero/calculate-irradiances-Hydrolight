@@ -1,5 +1,6 @@
 files/raw/*txt
 files/csv/*csv
+files/raw/files
 .*
 .gitignore
 env
